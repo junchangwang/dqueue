@@ -52,7 +52,6 @@ void queue_register(queue_t * q, handle_t * th, int id)
 		th->HSeg = q->HSeg;
 
 		// To organize handlers of producers as a linked list.
-		// mpsc.c uses a mutex lock to protect the concurrent accesses to global variable *producers*.
 		if (producers == NULL) {
 			producers = th;
 		}
@@ -98,7 +97,6 @@ Segment * find_segment(Segment *start, long id, handle_t *th)
 			new->id = i + 1;
 			if (CASra(&curr->next, &next, new)) {
 				next = new;
-				//printf("Successfully allocate segment (ID: %ld)\n", new->id);
 			}
 			else {
 				free(new);
@@ -123,8 +121,6 @@ void dump_local_buffer(queue_t * q, handle_t * th)
 		th->HSeg = seg;
 		DATA_TYPE * cell = &(seg->queue_data[tmp_pos % DQUEUE_SEG_SIZE]);
 		*cell = tmp_value;
-		//NOTE: Need barrier for architectures other than x86. 
-		//      Pair with barrier in help_enqueue().
 		th->local_head = NEXT(th->local_head, LOCAL_BUFFER_SIZE);
 	}
 }
@@ -143,8 +139,6 @@ void help_enqueue(queue_t * q)
 		 ** */
 		long tmp_head = tmp_handle->local_head;
 		long tmp_tail = tmp_handle->local_tail;
-		//NOTE: Need read barrier for architectures other than x86. 
-		//      Pair with barrier in enqueue().
 		for (int i = 0; (i < LOCAL_BUFFER_SIZE) && 
 				(WRAP(tmp_head + i, LOCAL_BUFFER_SIZE) != tmp_tail); 
 				i++) {
@@ -154,7 +148,7 @@ void help_enqueue(queue_t * q)
 			Segment * seg = find_segment(tmp_handle->HSeg, tmp_pos, tmp_handle);
 			if (seg->id > tmp_pos / DQUEUE_SEG_SIZE) {
 				/* Corresponding producer is making progress.   **
-				 ** Ther is no need to help it.                  */
+				 ** There is no need to help it.                  */
 				break;
 			}
 			DATA_TYPE * cell = &(seg->queue_data[tmp_pos % DQUEUE_SEG_SIZE]);
@@ -174,13 +168,11 @@ void enqueue(queue_t * q, handle_t * handle, void * value)
 	long tail = handle->local_tail;
 	handle->local_buffer[tail].value = value;
 	handle->local_buffer[tail].enqueue_pos = FAA(&q->tail, 1);
-	//NOTE: Need write barrier for architectures other than x86
 	handle->local_tail = NEXT(handle->local_tail, LOCAL_BUFFER_SIZE);
 }
 
 void * dequeue(queue_t * q, handle_t * th)
 {
-	//DATA_TYPE volatile * cell = find_cell(&th->Hqs, q->head, th);
 	Segment * seg = find_segment(th->HSeg, q->head, th);
 	th->HSeg = seg;
 	DATA_TYPE * cell = &(seg->queue_data[q->head % DQUEUE_SEG_SIZE]);
@@ -209,7 +201,6 @@ void queue_free(int id, int nprocs)
 		while(queue_g->HSeg != NULL) {
 			Segment * tmp = queue_g->HSeg;
 			queue_g->HSeg = queue_g->HSeg->next;
-			//printf("Clean up segment (ID: %ld) to shutdown.\n", tmp->id);
 			free(tmp);
 		}
 	}
@@ -246,12 +237,10 @@ static void * gc(void * var)
 		for (int i = 0; i < (guard_id - min_id); i++) {
 			Segment * tobe_freed = q->HSeg;
 			q->HSeg = q->HSeg->next;
-			//printf("To free retired segment (ID: %ld)\n", tobe_freed->id);
 			free(tobe_freed);
 		}
 
-		/* Garbage Collection for sublist [gard_id, max_id), which is subtle because  while the GC thread is reclaiming segments in this sublist, producer threads may access them concurrently. */
-
+		/* Garbage Collection for sublist [gard_id, max_id) */
 		// // Allocate buffer to record segments which producer threads are accessing.
 		// int id_buffer_len = max_id - min_id;
 		// long * id_buffer = malloc(id_buffer_len * sizeof(long));

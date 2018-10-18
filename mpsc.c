@@ -18,7 +18,7 @@ long nops;
 static queue_t * q;
 static handle_t ** hds;
 #ifdef VERIFY
-void** interm_enq[256]; // FIXME: Maximum enqueue thread number is 256.
+void** interm_enq[256]; 
 void** interm_deq;
 #endif
 #ifdef WORKLOAD
