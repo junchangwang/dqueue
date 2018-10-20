@@ -43,3 +43,4 @@ ltqueue
 log-*
 backup/
 .vscode
+*.swp

@@ -1,6 +1,6 @@
 ## DQueue
 
-DQueue is a multi-producer-single-consumer queue that is wait-free and processor-friendly. It outperforms previous queues in three different architectures (x86, Power8, and ARMv8) by utilizing novel explicit optimization techniques, including adding local buffers, reducing the use of branches, atomic operations and memory fences in program. DQueue is released under GPL v2. DQueue includes the following files:
+DQueue is a multi-producer-single-consumer queue that is wait-free and processor-friendly. It outperforms previous queues in three different architectures (x86, Power8, and ARMv8) by utilizing novel explicit optimization techniques, including adding local buffers, reducing the use of branches, atomic operations and memory fences in program. DQueue includes the following files:
 
 - dqueue.c: Source code of DQueue.
 - dqueue.h: Header file of dqueue.c.
@@ -9,7 +9,7 @@ DQueue is a multi-producer-single-consumer queue that is wait-free and processor
 
 ## Framework
 
-DQueue reuses the framework from Yang's WFQueue [1]. So most files in these directory belong to Yang. Copyright of these files is LICENSE.wfqueue. For details about this framework, please check README.wfqueue.md.
+DQueue reuses the framework from Yang's WFQueue [1]. So other files in this directory belong to Yang. Copyright of these files is LICENSE.wfqueue. For details about this framework, please check README.wfqueue.md.
 
 ## Compile and Run
 
@@ -30,7 +30,7 @@ Our testbed contains a brute force yet very helpful tool to verify the correctne
 ```
 VERIFY=1 make
 ```
-Then, each time you run DQueue (and others), each thread (including the consumer and producers) will log the data it inserts into or reads from the queue. These log files will be written into directory ``long-<timestamp>'', which can be verified by using the python script **verify.py**.
+Then, each time you run DQueue (and others), each thread (including the consumer and producers) will log the data it inserts into or reads from the queue. These log files will be written into directory ``log-<timestamp>'', which can be verified by using the python script **verify.py**.
 
 
 ## Contact
