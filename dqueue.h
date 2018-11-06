@@ -4,6 +4,15 @@
 #ifdef DQUEUE
 #include "align.h"
 
+/////////////////////////////////////
+// Borrow from Paul's excellent textbook.
+// https://mirrors.edge.kernel.org/pub/linux/kernel/people/paulmck/perfbook/perfbook.html
+#define ACCESS_ONCE(x) (*(volatile __typeof__(x) *)&(x))
+#define READ_ONCE(x) \
+	            ({ __typeof__(x) ___x = ACCESS_ONCE(x); ___x; })
+#define WRITE_ONCE(x, val) ({ ACCESS_ONCE(x) = (val); })
+/////////////////////////////////////
+
 #define DATA_TYPE void*   /* E.g., void * or long */
 #define BOT (DATA_TYPE)(intptr_t)(-1)
 #define POS_BOT (-1)

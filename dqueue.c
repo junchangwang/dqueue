@@ -12,7 +12,6 @@ static handle_t * consumer;
 static queue_t * queue_g;
 static long volatile gc_goflag;
 
-
 static Segment * new_segment() {
 	Segment *s = align_malloc(PAGE_SIZE, sizeof(Segment));
 	s->next = NULL;
@@ -113,15 +112,25 @@ void dump_local_buffer(queue_t * q, handle_t * th)
 	long head, tmp_pos;
 	DATA_TYPE tmp_value;
 	Segment * seg;
-	/* This thread (producer) is the only one who can update variables *local_head* and *local_tail* */
+
+	/* This producer is the only thread who can update variables 
+	 * *local_head* and *local_tail* */
 	while (th->local_head != th->local_tail) {
-		head = th->local_head;
+
+		/* Following READ_ONCE is to prevent compilers from performing too much
+		 * optimizations.  E.g., moving the assignment statement out of while loop. */
+		head = READ_ONCE(th->local_head); 
+
+		/* pos and value are retrieved in the reverse order that they were written into memory. */
 		tmp_pos = th->local_buffer[head].enqueue_pos;
 		tmp_value = th->local_buffer[head].value;
+
 		seg = find_segment(th->HSeg, tmp_pos, th);
 		th->HSeg = seg;
 		DATA_TYPE * cell = &(seg->queue_data[tmp_pos % DQUEUE_SEG_SIZE]);
 		*cell = tmp_value;
+
+		/* local_head is only updated by this producer thread. So we can omit a memory fence here. */
 		th->local_head = NEXT(th->local_head, LOCAL_BUFFER_SIZE);
 	}
 }
@@ -130,27 +139,32 @@ void help_enqueue(queue_t * q)
 {
 	handle_t * tmp_handle = producers;
 	while (tmp_handle != NULL) {
-		/* Since an enqueue request is two 64-bit word that aren't read or written atomically,
-		 ** when an enqueue helper reads the two words, it must identify if both belong to the
-		 ** same logical request.
-		 ** A helper reads an enqueue request's two words in the reverse order they were written,
-		 ** such that the data read belongs to request *tmp_pos* or a later request.
-		 ** If the data read is for a later request, a value has been written into cell *tmp_pos*,
-		 ** and the program will notice this and return by checking if *enqueued_value ==BOT*
-		 ** */
 		long tmp_head = tmp_handle->local_head;
 		long tmp_tail = tmp_handle->local_tail;
 		for (int i = 0; (i < LOCAL_BUFFER_SIZE) && 
-				(WRAP(tmp_head + i, LOCAL_BUFFER_SIZE) != tmp_tail); 
-				i++) {
+				(WRAP(tmp_head + i, LOCAL_BUFFER_SIZE) != tmp_tail); i++) {
+			/* Since an enqueue request is two 64-bit word (pos, value) that aren't
+			 * read or written atomically, when an enqueue helper reads the two words,
+			 * it must identify if both belong to the same logical request. A helper
+			 * reads an enqueue request's two words in the reverse order they were 
+			 * written, such that the data read belongs to request *tmp_pos* or a later
+			 * request. If the data read is for a later request, a value has been 
+			 * written into cell *tmp_pos*, and the program will notice this and return
+			 * by checking if (*cell == BOT). */
 			long head = WRAP(tmp_head+i, LOCAL_BUFFER_SIZE);
-			long tmp_pos = tmp_handle->local_buffer[head].enqueue_pos;
-			FENCE();
+
+
+			/* ACQUIRE could be replaced by a smp_rmb right after this line.
+		 	* We choose ACQUIRE for a fair comparison against other queue implementations. */
+			long tmp_pos = ACQUIRE(&tmp_handle->local_buffer[head].enqueue_pos);
+
+			/* pos and value are retrieved in the reverse order that they were written into memory. */
 			DATA_TYPE tmp_value = tmp_handle->local_buffer[head].value;
+
 			Segment * seg = find_segment(tmp_handle->HSeg, tmp_pos, tmp_handle);
 			if (seg->id > tmp_pos / DQUEUE_SEG_SIZE) {
 				/* Corresponding producer is making progress.   **
-				 ** There is no need to help it.                  */
+				 ** There is no need to help it.                */
 				break;
 			}
 			DATA_TYPE * cell = &(seg->queue_data[tmp_pos % DQUEUE_SEG_SIZE]);
@@ -168,9 +182,14 @@ void enqueue(queue_t * q, handle_t * handle, void * value)
 		dump_local_buffer(q, handle);
 	}
 	long tail = handle->local_tail;
+
 	handle->local_buffer[tail].value = value;
-	FENCE();
-	handle->local_buffer[tail].enqueue_pos = FAA(&q->tail, 1);
+	/* RELEASE could be replaced by a smp_wmb on this line.				*
+	 * We choose RELEASE for a fair comparison against other queue implementations. *
+	 * This RELEASE pairs with the ACQUIRE in help_enqueue().			*/
+	RELEASE(&handle->local_buffer[tail].enqueue_pos, FAA(&q->tail, 1));
+
+	/* local_tail is only updated by this producer thread. So we can omit a memory fence here. */
 	handle->local_tail = NEXT(handle->local_tail, LOCAL_BUFFER_SIZE);
 }
 
@@ -179,7 +198,10 @@ void * dequeue(queue_t * q, handle_t * th)
 	Segment * seg = find_segment(th->HSeg, q->head, th);
 	th->HSeg = seg;
 	DATA_TYPE * cell = &(seg->queue_data[q->head % DQUEUE_SEG_SIZE]);
-	while (*cell == BOT) {
+
+	/* Following READ_ONCE is to prevent compilers from performing too much
+	 * optimizations.  E.g., moving the assignment statement out of while loop. */
+	while (READ_ONCE(*cell) == BOT) {
 		if (q->head == q->tail) {
 			//NOTE: or return FULL.
 			usleep(10);
@@ -190,6 +212,7 @@ void * dequeue(queue_t * q, handle_t * th)
 		}
 	}
 	DATA_TYPE tmp = *cell;
+	/* head is only updated by consumer thread. So we can omit a memory fence here. */
 	q->head ++;
 	return tmp;
 }
