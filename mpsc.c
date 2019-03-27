@@ -18,7 +18,7 @@ long nops;
 static queue_t * q;
 static handle_t ** hds;
 #ifdef VERIFY
-void** interm_enq[256]; 
+void** interm_enq[256];
 void** interm_deq;
 #endif
 #ifdef WORKLOAD
@@ -32,7 +32,7 @@ static inline uint64_t rdtsc_bare()
 			"mov %%edx, %0\n\t"
 			"mov %%eax, %1\n\t"
 			: "=r" (msw), "=r"(lsw)
-			:   
+			:
 			: "%rax","%rdx");
 	time = ((uint64_t) msw << 32) | lsw;
 	return time;
@@ -106,7 +106,7 @@ void * benchmark(int id, int nprocs) {
     for (unsigned long i = 0; i < (nops/(nprocs - 1))*(nprocs - 1); i++) {
       val = dequeue(q, th);
 #ifdef WORKLOAD
-	  wait_ticks((uint64_t)(workload * 2.6));
+      wait_ticks((uint64_t)(workload * 2.6));
 #endif
 #ifdef VERIFY
       interm_deq[i] = val;
@@ -118,7 +118,8 @@ void * benchmark(int id, int nprocs) {
     for (unsigned long i = 0; i < (nops/(nprocs - 1)); ++i) {
       enqueue(q, th, (void *)(intptr_t)(base_i + i));
 #ifdef WORKLOAD
-	  wait_ticks((uint64_t)(workload * 2.6)*(nprocs-1)); // FIXME: 2.6GHz is a hack which is for the authors' servers running the tests.
+      /* The CPU on the testbed is running at 2.6GHz. */
+      wait_ticks((uint64_t)(workload * 2.6)*(nprocs-1));
 #endif
 #ifdef VERIFY
       interm_enq[id][i] = (void *)(intptr_t)(base_i + i);

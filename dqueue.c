@@ -42,7 +42,7 @@ void queue_register(queue_t * q, handle_t * th, int id)
 
 	if (id >= 1) { // For producers only
 		th->local_buffer = (buffer_elem *) malloc(LOCAL_BUFFER_SIZE * sizeof(buffer_elem));
-		if (th->local_buffer == NULL) 
+		if (th->local_buffer == NULL)
 			perror("Allocating local buffer: ");
 		for (int i = 0; i < LOCAL_BUFFER_SIZE; i++) {
 			th->local_buffer[i].enqueue_pos = POS_BOT;
@@ -86,7 +86,7 @@ unsigned long int WRAP(unsigned long x, unsigned long size)
 	return (x % size);
 }
 
-Segment * find_segment(Segment *start, long id, handle_t *th) 
+Segment * find_segment(Segment *start, long id, handle_t *th)
 {
 	Segment * curr = start;
 	Segment * next;
@@ -113,13 +113,13 @@ void dump_local_buffer(queue_t * q, handle_t * th)
 	DATA_TYPE tmp_value;
 	Segment * seg;
 
-	/* This producer is the only thread who can update variables 
+	/* This producer is the only thread who can update variables
 	 * *local_head* and *local_tail* */
 	while (th->local_head != th->local_tail) {
 
 		/* Following READ_ONCE is to prevent compilers from performing too much
 		 * optimizations.  E.g., moving the assignment statement out of while loop. */
-		head = READ_ONCE(th->local_head); 
+		head = READ_ONCE(th->local_head);
 
 		/* pos and value are retrieved in the reverse order that they were written into memory. */
 		tmp_pos = th->local_buffer[head].enqueue_pos;
@@ -135,13 +135,13 @@ void dump_local_buffer(queue_t * q, handle_t * th)
 	}
 }
 
-void help_enqueue(queue_t * q) 
+void help_enqueue(queue_t * q)
 {
 	handle_t * tmp_handle = producers;
 	while (tmp_handle != NULL) {
 		long tmp_head = tmp_handle->local_head;
 		long tmp_tail = tmp_handle->local_tail;
-		for (int i = 0; (i < LOCAL_BUFFER_SIZE) && 
+		for (int i = 0; (i < LOCAL_BUFFER_SIZE) &&
 				(WRAP(tmp_head + i, LOCAL_BUFFER_SIZE) != tmp_tail); i++) {
 			/* Since an enqueue request is two 64-bit word (pos, value) that aren't
 			 * read or written atomically, when an enqueue helper reads the two words,
