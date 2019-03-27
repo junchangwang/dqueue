@@ -1,6 +1,11 @@
 ## DQueue
 
-DQueue is a multi-producer-single-consumer queue that is wait-free and processor-friendly. It outperforms previous queues in three different architectures (x86, Power8, and ARMv8) by utilizing novel explicit optimization techniques, including adding local buffers, reducing the use of branches, atomic operations and memory fences in program. DQueue includes the following files:
+DQueue is an efficient and wait-free multi-producer-single-consumer queue.
+It outperforms prior queues on three different architectures (x86, Power8, 
+and ARMv8) by utilizing novel explicit optimization techniques, 
+including (1) exploiting local buffers, and (2) reducing the use of branches, 
+atomic operations and memory fences in program. 
+DQueue includes the following files:
 
 - dqueue.c: Source code of DQueue.
 - dqueue.h: Header file of dqueue.c.
@@ -9,11 +14,14 @@ DQueue is a multi-producer-single-consumer queue that is wait-free and processor
 
 ## Framework
 
-DQueue reuses the framework from Yang's WFQueue [1]. So other files in this directory belong to Yang. Copyright of these files is LICENSE.wfqueue. For details about this framework, please check README.wfqueue.md.
+For a fair comparison, DQueue integrates into the framework of Yang's WFQueue [1]. 
+The details of this framework can be found on README.wfqueue.md.
+Copyright of these files is LICENSE.wfqueue. 
 
 ## Compile and Run
 
-On most 64-bits machines running Linux, command "make" is enough to build testbed and DQueue executable file.
+On most 64-bits machines running Linux, 
+command "make" is enough to build the testbed and DQueue executable file.
 
 Usage:
 ```
@@ -22,11 +30,13 @@ Usage:
 
 ## Affinity setting files
 
-Upon start, DQueue first loads the specified affinity settings in cpumap.h. Users must check and revise the configuration before running DQueue on their machines.
+Upon start, DQueue loads the specified affinity settings in cpumap.h. 
+Users must check and revise the configuration before running DQueue on their machines.
 
 ## Verify correctness
 
-Our testbed contains a brute force yet very helpful tool to verify the correctness of queues. To use this tool, you should compile the project by using command:
+Our testbed contains a brute force yet helpful tool to verify the correctness of the queues. 
+To use this tool, you should compile the project by using command:
 ```
 VERIFY=1 make
 ```
