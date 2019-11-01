@@ -14,7 +14,7 @@ DQueue includes the following files:
 
 ## Framework
 
-For a fair comparison, DQueue integrates into the framework of Yang's WFQueue [1]. 
+DQueue has been integrated into the framework of Yang's WFQueue. 
 The details of this framework can be found on README.wfqueue.md.
 Copyright of these files is LICENSE.wfqueue. 
 
@@ -48,7 +48,3 @@ Then, each time you run DQueue (and others), each thread (including the consumer
 If you have any questions or suggestions regarding DQueue, please send email to junchangwang@gmail.com
 
 
---
-
-
-[1] C. Yang and J. M. Mellor-Crummey, “A wait-free queue as fast as fetch-and-add,” in PPOPP, 2016.
